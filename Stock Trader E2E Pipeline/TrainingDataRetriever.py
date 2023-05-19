@@ -53,7 +53,7 @@ def retrieve_and_store():
 
 
 def format_stored_data():
-
+    102000569582
     df = pd.read_csv('data/stock.csv')
     df = df.drop(['open', 'high', 'low', 'close', 'volume', 'dividend amount'], axis=1)
 
