@@ -1,0 +1,5 @@
+data/
+*.drawio
+*.idea
+*.DS_Store
+*.vscode
