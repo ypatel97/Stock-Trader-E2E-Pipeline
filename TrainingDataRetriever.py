@@ -53,7 +53,7 @@ def retrieve_and_store():
 
 
 def format_stored_data():
-    
+
     df = pd.read_csv('data/stock.csv')
     df = df.drop(['open', 'high', 'low', 'close', 'volume', 'dividend amount'], axis=1)
 
@@ -78,5 +78,9 @@ def format_trending_data():
     trending_ti = ['SMA', 'EMA', 'VWAP', 'MACD', 'AROON', 'BBANDS', 'AD', 'OBV']
 
 if __name__ == '__main__':
-    retrieve_and_store() # Gets data and stores it in data folder
-    format_stored_data() # Formats all the data into a single CSV called 'FormattedData'
+    # Gets data and stores it in data folder
+    retrieve_and_store()
+
+    # Formats all the data into a single CSV called 'FormattedData' using Pandas (if not using postgreSQL and Spark)
+    format_stored_data()
+
