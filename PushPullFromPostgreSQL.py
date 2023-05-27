@@ -13,7 +13,7 @@ def push_data_to_postgreSQL():
     host = 'localhost'
     database = 'Stock Pipeline'
     user = 'postgres'
-    password = '970601'
+    password = '######'
     port_id = 5432
     conn = None
     cursor = None
@@ -92,7 +92,7 @@ def pull_data_from_postgreSQL():
     host = 'localhost'
     database = 'Stock Pipeline'
     user = 'postgres'
-    password = '970601'
+    password = '######'
     port_id = 5432
     conn = None
     cursor = None
