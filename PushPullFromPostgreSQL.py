@@ -144,7 +144,11 @@ def pull_data_from_postgreSQL():
 
         # Spark takes too long to write and has large size
         combined_df.write.csv('FormattedDataPostgreSQL', header=True, mode="overwrite", compression='gzip')
-        spark.close()
+
+        ## Alternatively convert to pandas df and save it
+        combined_df = combined_df.toPandas()
+        combined_df.to_csv('FormattedDataPostgreSQL.csv', index=False)
+
     except Exception as error:
         print(error)
     finally:

@@ -10,21 +10,19 @@ import math
 
 def main():
 
-
     # Read and organize the data
     data = pd.read_csv('FormattedData.csv')
     data = data.dropna()
     features = data.drop(columns=['Adjusted Close']).iloc[:-1]
 
-
     # The target will be the adjusted close price of NEXT week, to train the ML models on predicting future stock price
     target = data['Adjusted Close'][1:].to_frame()
     target = target.set_index(features['timestamp'])
-    features = features.set_index('timestamp')
-
     # Split the data (80% train, 20% test)
     split_ratio = 0.8
     split_idx = math.floor(len(features)*split_ratio)
+    features = features.set_index('timestamp')
+
 
     # Generate the necessary datasets
     train_features = features.iloc[len(features)-split_idx:]
@@ -39,41 +37,51 @@ def main():
 
 
 
-def pyspark_random_forest(train_features, test_features, train_target, test_target):
+def pyspark_random_forest(train_features, test_features, train_target, test_target, eval=True):
 
     # Create spark session
-    spark = SparkSession.builder.getOrCreate()
+    spark = SparkSession.builder \
+        .master('local[*]') \
+        .config('spark.driver.memory', '15g') \
+        .appName('Random Forest Regressor') \
+        .getOrCreate()
 
+    train_features.drop(['open', 'high', 'low', 'close', 'volume', 'dividend amount'], axis=1, inplace=True)
+    test_features.drop(['open', 'high', 'low', 'close', 'volume', 'dividend amount'], axis=1, inplace=True)
     # Convert the Pandas DataFrames to PySpark DataFrames
-    train_data = spark.createDataFrame(train_features)
-    train_data = train_data.withColumn("target", train_target)
-
-    test_data = spark.createDataFrame(test_features)
-    test_data = test_data.withColumn("target", test_target)
+    train_data = spark.createDataFrame(train_features.join(train_target))
+    test_data = spark.createDataFrame(test_features.join(test_target))
 
     # Select the feature column names
     selected_columns = train_features.columns
 
     # Create a VectorAssembler instance
-    assembler = VectorAssembler(inputCols=selected_columns, outputCol="features")
+    assembler = VectorAssembler(inputCols=list(selected_columns), outputCol="features")
 
     # Apply the assembler to the training and testing data
     train_data = assembler.transform(train_data)
     test_data = assembler.transform(test_data)
 
-    # Create a Random Forest regressor
-    rf = RandomForestRegressor(featuresCol="features", labelCol="target")
+    rf = RandomForestRegressor(featuresCol="features",
+                               labelCol="Adjusted Close",
+                               numTrees=30,
+                               maxDepth=5,
+                               bootstrap=False)
 
     # Train the Random Forest model
     model = rf.fit(train_data)
 
-    # Make predictions on the test data
-    predictions = model.transform(test_data)
+    if eval:
+        # Make predictions on the test data
+        predictions = model.transform(test_data)
+        # Evaluate the model using RegressionEvaluator
+        evaluator = RegressionEvaluator(labelCol="Adjusted Close", predictionCol="prediction", metricName="rmse")
+        rmse = evaluator.evaluate(predictions)
+        print(f"Root Mean Squared Error: {rmse}")
 
-    # Evaluate the model using RegressionEvaluator
-    evaluator = RegressionEvaluator(labelCol="target", predictionCol="prediction", metricName="rmse")
-    rmse = evaluator.evaluate(predictions)
-    print("Root Mean Squared Error (RMSE):", rmse)
+
+    # Feature engineering
+
 
     return model
 
