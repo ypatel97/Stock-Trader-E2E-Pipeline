@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.ml.feature import VectorAssembler
+from pyspark.ml.feature import VectorAssembler, StandardScaler, StringIndexer, OneHotEncoder
 from pyspark.ml.regression import RandomForestRegressor
 from pyspark.ml.evaluation import RegressionEvaluator
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
@@ -37,7 +37,7 @@ def main():
 
 
 
-def pyspark_random_forest(train_features, test_features, train_target, test_target, eval=True):
+def pyspark_random_forest(train_features, test_features, train_target, test_target, eval=True, feature_engineering=False):
 
     # Create spark session
     spark = SparkSession.builder \
@@ -56,16 +56,27 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
     selected_columns = train_features.columns
 
     # Create a VectorAssembler instance
-    assembler = VectorAssembler(inputCols=list(selected_columns), outputCol="features")
+    assembler = VectorAssembler(inputCols=list(selected_columns), outputCol='features')
 
     # Apply the assembler to the training and testing data
     train_data = assembler.transform(train_data)
     test_data = assembler.transform(test_data)
+    featureCol = 'features'
 
-    rf = RandomForestRegressor(featuresCol="features",
+    # Feature engineering -- Tends to perform slightly worse than without feature engineering
+    if feature_engineering:
+        train_scaler = StandardScaler(inputCol='features', outputCol='scaled_features')
+        train_data = train_scaler.fit(train_data).transform(train_data)
+
+        test_scaler = StandardScaler(inputCol='features', outputCol='scaled_features')
+        test_data = test_scaler.fit(test_data).transform(test_data)
+        featureCol = 'scaled_features'
+
+
+    rf = RandomForestRegressor(featuresCol=featureCol,
                                labelCol="Adjusted Close",
-                               numTrees=30,
-                               maxDepth=5,
+                               numTrees=25,
+                               maxDepth=10,
                                bootstrap=False)
 
     # Train the Random Forest model
@@ -79,8 +90,6 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
         rmse = evaluator.evaluate(predictions)
         print(f"Root Mean Squared Error: {rmse}")
 
-
-    # Feature engineering
 
 
     return model
