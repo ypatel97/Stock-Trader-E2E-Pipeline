@@ -98,6 +98,7 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
 
 def xgb_gradient_boosting(train_features, test_features, train_target, test_target):
 
+    # Dropping lowest performing features after testing
     features_to_drop = ['HT_DCPHASE', 'HT_TRENDLINE', 'AROONOSC', 'ROC', 'PPO', 'MACD_Signal', 'T3']
     train_features.drop(features_to_drop, axis=1, inplace=True)
     test_features.drop(features_to_drop, axis=1, inplace=True)
