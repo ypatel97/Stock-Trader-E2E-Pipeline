@@ -6,6 +6,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import xgboost as xgb
 import tensorflow as tf
 import pandas as pd
+import matplotlib.pyplot as plt
 import math
 
 def main():
@@ -96,15 +97,18 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
 
 
 def xgb_gradient_boosting(train_features, test_features, train_target, test_target):
+    train_features.drop(['open', 'high', 'low', 'close', 'volume', 'dividend amount'], axis=1, inplace=True)
+    test_features.drop(['open', 'high', 'low', 'close', 'volume', 'dividend amount'], axis=1, inplace=True)
 
     # Convert to Dmatrix
     dtrain = xgb.DMatrix(train_features, label=train_target)
     dtest = xgb.DMatrix(test_features)
 
+
     # Params for the model
     params = {
         "objective": "reg:squarederror",
-        "eta": 0.1,
+        "eta": 0.6,
         "max_depth": 6,
         "min_child_weight": 1,
         "gamma": 0,
@@ -121,7 +125,10 @@ def xgb_gradient_boosting(train_features, test_features, train_target, test_targ
 
     # Evaluate the model
     rmse = math.sqrt(mean_squared_error(test_target, predictions))
-    print(f'RMSE: {rmse}')
+
+    xgb.plot_importance(model)
+    plt.show()
+    print(f'rmse: {rmse}')
 
 def tf_neural_network(train_features, test_features, train_target, test_target):
     pass
