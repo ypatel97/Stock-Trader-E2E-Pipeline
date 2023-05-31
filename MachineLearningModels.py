@@ -97,13 +97,14 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
 
 
 def xgb_gradient_boosting(train_features, test_features, train_target, test_target):
-    train_features.drop(['open', 'high', 'low', 'close', 'volume', 'dividend amount'], axis=1, inplace=True)
-    test_features.drop(['open', 'high', 'low', 'close', 'volume', 'dividend amount'], axis=1, inplace=True)
+
+    features_to_drop = ['HT_DCPHASE', 'HT_TRENDLINE', 'AROONOSC', 'ROC', 'PPO', 'MACD_Signal', 'T3']
+    train_features.drop(features_to_drop, axis=1, inplace=True)
+    test_features.drop(features_to_drop, axis=1, inplace=True)
 
     # Convert to Dmatrix
     dtrain = xgb.DMatrix(train_features, label=train_target)
     dtest = xgb.DMatrix(test_features)
-
 
     # Params for the model
     params = {
@@ -111,6 +112,8 @@ def xgb_gradient_boosting(train_features, test_features, train_target, test_targ
         "eta": 0.6,
         "max_depth": 6,
         "min_child_weight": 1,
+        "alpha":  0.14,
+        "lambda": 0.98,
         "gamma": 0,
         "subsample": 1,
         "colsample_bytree": 1,
@@ -126,8 +129,8 @@ def xgb_gradient_boosting(train_features, test_features, train_target, test_targ
     # Evaluate the model
     rmse = math.sqrt(mean_squared_error(test_target, predictions))
 
-    xgb.plot_importance(model)
-    plt.show()
+    # xgb.plot_importance(model)
+    # plt.show()
     print(f'rmse: {rmse}')
 
 def tf_neural_network(train_features, test_features, train_target, test_target):
