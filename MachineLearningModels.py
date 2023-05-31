@@ -91,8 +91,6 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
         rmse = evaluator.evaluate(predictions)
         print(f"Root Mean Squared Error: {rmse}")
 
-
-
     return model
 
 
