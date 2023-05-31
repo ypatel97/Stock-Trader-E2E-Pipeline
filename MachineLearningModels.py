@@ -38,7 +38,7 @@ def main():
 
     # TODO: extract the models into an exportable format for Docker/EC2, also add a way to run metrics from new data
 
-def pyspark_random_forest(train_features, test_features, train_target, test_target, eval=True, feature_engineering=False):
+def pyspark_random_forest(train_features, test_features, train_target, test_target, test=True, feature_engineering=False):
 
     # Create spark session
     spark = SparkSession.builder \
@@ -83,7 +83,7 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
     # Train the Random Forest model
     model = rf.fit(train_data)
 
-    if eval:
+    if test:
         # Make predictions on the test data
         predictions = model.transform(test_data)
         # Evaluate the model using RegressionEvaluator
@@ -96,7 +96,7 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
     return model
 
 
-def xgb_gradient_boosting(train_features, test_features, train_target, test_target):
+def xgb_gradient_boosting(train_features, test_features, train_target, test_target, test=False):
 
     # Dropping lowest performing features after testing
     features_to_drop = ['HT_DCPHASE', 'HT_TRENDLINE', 'AROONOSC', 'ROC', 'PPO', 'MACD_Signal', 'T3']
@@ -130,9 +130,12 @@ def xgb_gradient_boosting(train_features, test_features, train_target, test_targ
     # Evaluate the model
     rmse = math.sqrt(mean_squared_error(test_target, predictions))
 
-    # xgb.plot_importance(model)
-    # plt.show()
-    print(f'rmse: {rmse}')
+    if eval:
+        xgb.plot_importance(model)
+        plt.show()
+        print(f'rmse: {rmse}')
+
+    return model
 
 def tf_neural_network(train_features, test_features, train_target, test_target):
     pass
