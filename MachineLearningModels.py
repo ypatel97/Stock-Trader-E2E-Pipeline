@@ -6,6 +6,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import xgboost as xgb
 import tensorflow as tf
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import math
 
@@ -33,7 +34,7 @@ def main():
 
     # Train the models
     # random_forest_model = pyspark_random_forest(train_features, test_features, train_target, test_target)
-    gradient_boosting_model = xgb_gradient_boosting(train_features, test_features, train_target, test_target)
+    # gradient_boosting_model = xgb_gradient_boosting(train_features, test_features, train_target, test_target)
     neural_network_model = tf_neural_network(train_features, test_features, train_target, test_target)
 
     # TODO: extract the models into an exportable format for Docker/EC2, also add a way to run metrics from new data
@@ -49,6 +50,7 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
 
     train_features.drop(['open', 'high', 'low', 'close', 'volume', 'dividend amount'], axis=1, inplace=True)
     test_features.drop(['open', 'high', 'low', 'close', 'volume', 'dividend amount'], axis=1, inplace=True)
+
     # Convert the Pandas DataFrames to PySpark DataFrames
     train_data = spark.createDataFrame(train_features.join(train_target))
     test_data = spark.createDataFrame(test_features.join(test_target))
@@ -93,7 +95,6 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
 
     return model
 
-
 def xgb_gradient_boosting(train_features, test_features, train_target, test_target, test=False):
 
     # Dropping lowest performing features after testing
@@ -120,6 +121,7 @@ def xgb_gradient_boosting(train_features, test_features, train_target, test_targ
     }
 
     # Train model
+    #TODO try using xgb regressor
     model = xgb.train(params, dtrain)
 
     # Fit the model
@@ -136,9 +138,45 @@ def xgb_gradient_boosting(train_features, test_features, train_target, test_targ
     return model
 
 def tf_neural_network(train_features, test_features, train_target, test_target):
-    pass
 
+    # Convert the data to numpy arrays
+    X_train = np.array(train_features)
+    y_train = np.array(train_target)
+    X_test = np.array(test_features)
+    y_test = np.array(test_target)
 
+    # Normalize the input features
+    mean = np.mean(X_train, axis=0)
+    std = np.std(X_train, axis=0)
+    X_train = (X_train - mean) / std
+    X_test = (X_test - mean) / std
+
+    activation_func = ['selu', 'linear'] # (selu, linear,
+
+    epochs = []
+    for n in range(len(activation_func)):
+        l = []
+        for j in range(50):
+            model = tf.keras.models.Sequential([
+                tf.keras.layers.Dense(64, activation=activation_func, input_shape=(X_train.shape[1],)),
+                tf.keras.layers.Dense(32, activation=activation_func),
+                tf.keras.layers.Dense(16, activation=activation_func),
+                tf.keras.layers.Dense(8, activation=activation_func),
+                tf.keras.layers.Dense(1)
+            ])
+
+            model.compile(optimizer='rmsprop', loss='mean_squared_error')
+
+            model.fit(X_train, y_train, epochs=164, batch_size=8, validation_data=(X_test, y_test))
+
+            predictions = model.predict(X_test)
+
+            mse = mean_squared_error(y_test, predictions)
+            rmse = math.sqrt(mse)
+            l.append(rmse)
+        epochs.append(f'rmse: {sum(l)/len(l)}, BATCHSIZE: {n}') #145 epochs
+
+    x = 1
 
 if __name__ == '__main__':
     main()

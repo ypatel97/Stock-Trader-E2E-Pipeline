@@ -160,7 +160,7 @@ def pull_data_from_postgreSQL():
 
 if __name__ == '__main__':
     # Push data to PostgreSQL
-    # push_data_to_postgreSQL()
+    push_data_to_postgreSQL()
 
     # Pull data from PostgreSQL
     pull_data_from_postgreSQL()
