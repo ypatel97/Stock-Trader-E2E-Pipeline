@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.ml.feature import VectorAssembler, StandardScaler, StringIndexer, OneHotEncoder
+from pyspark.ml.feature import VectorAssembler, MinMaxScaler, StringIndexer, OneHotEncoder
 from pyspark.ml.regression import RandomForestRegressor
 from pyspark.ml.evaluation import RegressionEvaluator
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, mean_squared_error
@@ -34,8 +34,8 @@ def main():
 
     # Train the models
     # random_forest_model = pyspark_random_forest(train_features, test_features, train_target, test_target)
-    # gradient_boosting_model = xgb_gradient_boosting(train_features, test_features, train_target, test_target)
-    neural_network_model = tf_neural_network(train_features, test_features, train_target, test_target)
+    gradient_boosting_model = xgb_gradient_boosting(train_features, test_features, train_target, test_target)
+    # neural_network_model = tf_neural_network(train_features, test_features, train_target, test_target)
 
     # TODO: extract the models into an exportable format for Docker/EC2, also add a way to run metrics from new data
 
@@ -48,8 +48,10 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
         .appName('Random Forest Regressor') \
         .getOrCreate()
 
-    train_features.drop(['open', 'high', 'low', 'close', 'volume', 'dividend amount'], axis=1, inplace=True)
-    test_features.drop(['open', 'high', 'low', 'close', 'volume', 'dividend amount'], axis=1, inplace=True)
+    # Dropping lowest performing features after testing
+    features_to_drop = ['HT_DCPHASE', 'HT_TRENDLINE', 'AROONOSC', 'ROC', 'PPO', 'MACD_Signal', 'T3']
+    train_features.drop(features_to_drop, axis=1, inplace=True)
+    test_features.drop(features_to_drop, axis=1, inplace=True)
 
     # Convert the Pandas DataFrames to PySpark DataFrames
     train_data = spark.createDataFrame(train_features.join(train_target))
@@ -68,19 +70,19 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
 
     # Feature engineering -- Tends to perform slightly worse than without feature engineering
     if feature_engineering:
-        train_scaler = StandardScaler(inputCol='features', outputCol='scaled_features')
+        train_scaler = MinMaxScaler(inputCol='features', outputCol='scaled_features')
         train_data = train_scaler.fit(train_data).transform(train_data)
 
-        test_scaler = StandardScaler(inputCol='features', outputCol='scaled_features')
+        test_scaler = MinMaxScaler(inputCol='features', outputCol='scaled_features')
         test_data = test_scaler.fit(test_data).transform(test_data)
         featureCol = 'scaled_features'
 
 
     rf = RandomForestRegressor(featuresCol=featureCol,
                                labelCol="Adjusted Close",
-                               numTrees=25,
+                               numTrees=30,
                                maxDepth=10,
-                               bootstrap=False)
+                               bootstrap=True)
 
     # Train the Random Forest model
     model = rf.fit(train_data)
@@ -91,11 +93,12 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
         # Evaluate the model using RegressionEvaluator
         evaluator = RegressionEvaluator(labelCol="Adjusted Close", predictionCol="prediction", metricName="rmse")
         rmse = evaluator.evaluate(predictions)
+        predictions = predictions.toPandas()
         print(f"Root Mean Squared Error: {rmse}")
 
     return model
 
-def xgb_gradient_boosting(train_features, test_features, train_target, test_target, test=False):
+def xgb_gradient_boosting(train_features, test_features, train_target, test_target, test=True):
 
     # Dropping lowest performing features after testing
     features_to_drop = ['HT_DCPHASE', 'HT_TRENDLINE', 'AROONOSC', 'ROC', 'PPO', 'MACD_Signal', 'T3']
@@ -121,23 +124,23 @@ def xgb_gradient_boosting(train_features, test_features, train_target, test_targ
     }
 
     # Train model
-    #TODO try using xgb regressor
-    model = xgb.train(params, dtrain)
+    xgb_reg_model = xgb.XGBRegressor(**params)
+    xgb_reg_model.fit(train_features, train_target)
 
     # Fit the model
-    predictions = model.predict(dtest)
+    predictions = xgb_reg_model.predict(test_features)
 
     # Evaluate the model
     rmse = math.sqrt(mean_squared_error(test_target, predictions))
 
-    if eval:
-        xgb.plot_importance(model)
-        plt.show()
+    if test:
+        # xgb.plot_importance(xgb_reg_model)
+        # plt.show()
         print(f'rmse: {rmse}')
 
-    return model
+    return xgb_reg_model
 
-def tf_neural_network(train_features, test_features, train_target, test_target):
+def tf_neural_network(train_features, test_features, train_target, test_target, test=True):
 
     # Convert the data to numpy arrays
     X_train = np.array(train_features)
@@ -153,30 +156,23 @@ def tf_neural_network(train_features, test_features, train_target, test_target):
 
     activation_func = ['selu', 'linear'] # (selu, linear,
 
-    epochs = []
-    for n in range(len(activation_func)):
-        l = []
-        for j in range(50):
-            model = tf.keras.models.Sequential([
-                tf.keras.layers.Dense(64, activation=activation_func, input_shape=(X_train.shape[1],)),
-                tf.keras.layers.Dense(32, activation=activation_func),
-                tf.keras.layers.Dense(16, activation=activation_func),
-                tf.keras.layers.Dense(8, activation=activation_func),
-                tf.keras.layers.Dense(1)
-            ])
+    model = tf.keras.models.Sequential([
+        tf.keras.layers.Dense(64, activation=activation_func, input_shape=(X_train.shape[1],)),
+        tf.keras.layers.Dense(32, activation=activation_func),
+        tf.keras.layers.Dense(16, activation=activation_func),
+        tf.keras.layers.Dense(8, activation=activation_func),
+        tf.keras.layers.Dense(1)
+    ])
 
-            model.compile(optimizer='rmsprop', loss='mean_squared_error')
+    model.compile(optimizer='rmsprop', loss='mean_squared_error')
 
-            model.fit(X_train, y_train, epochs=164, batch_size=8, validation_data=(X_test, y_test))
+    model.fit(X_train, y_train, epochs=164, batch_size=8, validation_data=(X_test, y_test))
 
-            predictions = model.predict(X_test)
-
-            mse = mean_squared_error(y_test, predictions)
-            rmse = math.sqrt(mse)
-            l.append(rmse)
-        epochs.append(f'rmse: {sum(l)/len(l)}, BATCHSIZE: {n}') #145 epochs
-
-    x = 1
+    if test:
+        predictions = model.predict(X_test)
+        mse = mean_squared_error(y_test, predictions)
+        rmse = math.sqrt(mse)
+        print(f'rmse: {rmse}')
 
 if __name__ == '__main__':
     main()
