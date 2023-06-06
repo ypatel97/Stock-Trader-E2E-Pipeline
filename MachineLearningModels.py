@@ -33,11 +33,16 @@ def main():
     test_target = target.iloc[:len(features)-split_idx]
 
     # Train the models
-    # random_forest_model = pyspark_random_forest(train_features, test_features, train_target, test_target)
+    random_forest_model = pyspark_random_forest(train_features, test_features, train_target, test_target)
     gradient_boosting_model = xgb_gradient_boosting(train_features, test_features, train_target, test_target)
-    # neural_network_model = tf_neural_network(train_features, test_features, train_target, test_target)
+    neural_network_model = tf_neural_network(train_features, test_features, train_target, test_target)
 
-    # TODO: extract the models into an exportable format for Docker/EC2, also add a way to run metrics from new data
+    # Save the models
+    path = 'Models/'
+    random_forest_model.save(path)
+    gradient_boosting_model.save(path)
+    tf.saved_model.save(neural_network_model, path)
+
 
 def pyspark_random_forest(train_features, test_features, train_target, test_target, test=True, feature_engineering=False):
 
