@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.ml.feature import VectorAssembler, MinMaxScaler, StringIndexer, OneHotEncoder
+from pyspark.ml.feature import VectorAssembler, MinMaxScaler
 from pyspark.ml.regression import RandomForestRegressor
 from pyspark.ml.evaluation import RegressionEvaluator
 from sklearn.metrics import mean_squared_error
@@ -33,15 +33,27 @@ def main():
     test_target = target.iloc[:len(features)-split_idx]
 
     # Train the models
-    random_forest_model = pyspark_random_forest(train_features, test_features, train_target, test_target)
-    gradient_boosting_model = xgb_gradient_boosting(train_features, test_features, train_target, test_target)
-    neural_network_model = tf_neural_network(train_features, test_features, train_target, test_target)
+    random_forest_model = pyspark_random_forest(train_features.copy(),
+                                                test_features.copy(),
+                                                train_target.copy(),
+                                                test_target.copy())
 
+    gradient_boosting_model = xgb_gradient_boosting(train_features.copy(),
+                                                    test_features.copy(),
+                                                    train_target.copy(),
+                                                    test_target.copy())
+
+    neural_network_model = tf_neural_network(train_features.copy(),
+                                             test_features.copy(),
+                                             train_target.copy(),
+                                             test_target.copy())
+
+    # Todo: fix this
     # Save the models
     path = 'Models/'
-    random_forest_model.save(path)
-    gradient_boosting_model.save(path)
-    tf.saved_model.save(neural_network_model, path)
+    random_forest_model.write().overwrite().save(path)
+    gradient_boosting_model.save(path, overwrite=True)
+    tf.saved_model.save(neural_network_model, path, overwrite=True)
 
 
 def pyspark_random_forest(train_features, test_features, train_target, test_target, test=True, feature_engineering=False):
@@ -103,7 +115,7 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
 
     return model
 
-def xgb_gradient_boosting(train_features, test_features, train_target, test_target, test=True):
+def xgb_gradient_boosting(train_features, test_features, train_target, test_target, test=False):
 
     # Dropping lowest performing features after testing
     features_to_drop = ['HT_DCPHASE', 'HT_TRENDLINE', 'AROONOSC', 'ROC', 'PPO', 'MACD_Signal', 'T3']
@@ -139,7 +151,7 @@ def xgb_gradient_boosting(train_features, test_features, train_target, test_targ
 
     return xgb_reg_model
 
-def tf_neural_network(train_features, test_features, train_target, test_target, test=True):
+def tf_neural_network(train_features, test_features, train_target, test_target, test=False):
 
     # Convert the data to numpy arrays
     X_train = np.array(train_features)
@@ -153,7 +165,7 @@ def tf_neural_network(train_features, test_features, train_target, test_target, 
     X_train = (X_train - mean) / std
     X_test = (X_test - mean) / std
 
-    activation_func = ['selu', 'linear'] # (selu, linear,
+    activation_func = 'selu'
 
     model = tf.keras.models.Sequential([
         tf.keras.layers.Dense(64, activation=activation_func, input_shape=(X_train.shape[1],)),
