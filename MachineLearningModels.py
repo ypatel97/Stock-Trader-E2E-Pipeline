@@ -3,7 +3,6 @@ from pyspark.ml.feature import VectorAssembler, MinMaxScaler, StringIndexer, One
 from pyspark.ml.regression import RandomForestRegressor
 from pyspark.ml.evaluation import RegressionEvaluator
 from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 import xgboost as xgb
 import tensorflow as tf
 import pandas as pd
@@ -99,84 +98,39 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
 
     return model
 
-def xgb_gradient_boosting(train_features, test_features, train_target, test_target, test=True, gs=True):
+def xgb_gradient_boosting(train_features, test_features, train_target, test_target, test=True):
 
     # Dropping lowest performing features after testing
     features_to_drop = ['HT_DCPHASE', 'HT_TRENDLINE', 'AROONOSC', 'ROC', 'PPO', 'MACD_Signal', 'T3']
     train_features.drop(features_to_drop, axis=1, inplace=True)
     test_features.drop(features_to_drop, axis=1, inplace=True)
 
-    if gs:
-        # Params for the model
-        params = {
-            "objective": ["reg:squarederror"],
-            "eta": np.arange(0.0, 1.0, 0.01),
-            "max_depth": range(3, 11),  # 6
-            "min_child_weight": [1],
-            "alpha": np.arange(0.0, 1.0, 0.01),  # 0.14
-            "lambda": np.arange(0.0, 1.0, 0.01),  # 0.98
-            "gamma": [0],
-            "subsample": [1],
-            "colsample_bytree": [1],
-            "eval_metric": ["rmse"]
-        }
+    params = {
+        "objective": "reg:squarederror",
+        "eta": .67,
+        "max_depth": 10,
+        "min_child_weight": 1,
+        "alpha": 0,
+        "lambda": 1,
+        "gamma": 0,
+        "subsample": 1,
+        "colsample_bytree": 1,
+        "eval_metric": "rmse"
+    }
 
-        xgb_model = xgb.XGBRegressor()
-        best_params = None
-        best_rmse = float('inf')
-
-        for i in range(10, len(train_features)-2):
-            train_fold_features = train_features[:i + 1]
-            train_fold_target = train_target[:i + 1]
-
-            # Create GridSearchCV object with the XGBRegressor model, parameter grid, and custom scoring
-            grid_search = GridSearchCV(estimator=xgb_model, param_grid=params, scoring='neg_mean_squared_error')
-
-            # Fit the grid search model on the training fold data
-            grid_search.fit(train_fold_features, train_fold_target)
-
-            # Get the best model
-            best_model = grid_search.best_estimator_
-
-            # Make predictions on the validation fold
-            val_predictions = best_model.predict(train_features[i + 1:i + 2])
-
-            # Calculate RMSE
-            rmse = np.sqrt(mean_squared_error(train_target[i + 1:i + 2], val_predictions))
-
-            # Update best parameters and best RMSE
-            if rmse < best_rmse:
-                best_params = grid_search.best_params_
-                best_rmse = rmse
-
-        print(f'best params: {best_params}, best rmse: {best_rmse}')
-    else:
-        params = {
-            "objective": "reg:squarederror",
-            "eta": 0.6,
-            "max_depth": 6,  # 6
-            "min_child_weight": 1,
-            "alpha": .14,  # 0.14
-            "lambda": .98,  # 0.98
-            "gamma": 0,
-            "subsample": 1,
-            "colsample_bytree": 1,
-            "eval_metric": "rmse"
-        }
-        # Train model
-        xgb_reg_model = xgb.XGBRegressor(**params)
-        xgb_reg_model.fit(train_features, train_target)
-
-    # Fit the model
-    predictions = xgb_reg_model.predict(test_features)
-
-    # Evaluate the model
-    rmse = math.sqrt(mean_squared_error(test_target, predictions))
+    # Train model
+    xgb_reg_model = xgb.XGBRegressor(**params)
+    xgb_reg_model.fit(train_features, train_target)
 
     if test:
+        # Fit the model
+        predictions = xgb_reg_model.predict(test_features)
+
+        # Evaluate the model
+        rmse = math.sqrt(mean_squared_error(test_target, predictions))
         # xgb.plot_importance(xgb_reg_model)
         # plt.show()
-        print(f'rmse: {rmse} param: {n}')
+        print(f'rmse: {rmse} ')
 
     return xgb_reg_model
 
