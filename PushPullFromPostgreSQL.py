@@ -1,6 +1,6 @@
-# ----- Use this if you want to publish data to postgreSQL database and then retrieve and format the data using Spark
-# ----- This will produce the same file that is produced by format_stored_data() but it will push the data to
-# ----- to a local PostgreSQL server then retrieve and format that data using Apache Spark
+# ----- Use this if you want to publish StockData to postgreSQL database and then retrieve and format the StockData using Spark
+# ----- This will produce the same file that is produced by format_stored_data() but it will push the StockData to
+# ----- to a local PostgreSQL server then retrieve and format that StockData using Apache Spark
 # *******  MAKE SURE TO RUN THE API TO GET THE DATA BEFORE RUNNING THIS *******
 # *** BEWARE: IT TAKES A LONG TIME TO PULL DATA FROM POSTGRESQL AND CONVERT TO CSV ***
 import os
@@ -53,7 +53,7 @@ def push_data_to_postgreSQL():
             cursor.execute(create_table_query)
             conn.commit()
 
-            # Open the CSV file and execute the COPY command to import data
+            # Open the CSV file and execute the COPY command to import StockData
             with open(file_path, 'r') as file:
                 cursor.copy_expert(f"COPY {table_name} FROM STDIN WITH (FORMAT CSV, HEADER TRUE)", file)
 
@@ -71,7 +71,7 @@ def push_data_to_postgreSQL():
 
 def get_files():
     # Folder path
-    folder_path = 'data'
+    folder_path = 'StockData'
 
     csv_files = []
 
@@ -159,8 +159,8 @@ def pull_data_from_postgreSQL():
 
 
 if __name__ == '__main__':
-    # Push data to PostgreSQL
+    # Push StockData to PostgreSQL
     push_data_to_postgreSQL()
 
-    # Pull data from PostgreSQL
+    # Pull StockData from PostgreSQL
     pull_data_from_postgreSQL()

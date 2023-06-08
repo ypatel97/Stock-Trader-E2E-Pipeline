@@ -12,7 +12,7 @@ import math
 
 def main():
 
-    # Read and organize the data
+    # Read and organize the StockData
     data = pd.read_csv('FormattedData.csv')
     data = data.dropna()
     features = data.drop(columns=['Adjusted Close']).iloc[:-1]
@@ -20,7 +20,7 @@ def main():
     # The target will be the adjusted close price of NEXT week, to train the ML models on predicting future stock price
     target = data['Adjusted Close'][1:].to_frame()
     target = target.set_index(features['timestamp'])
-    # Split the data (80% train, 20% test)
+    # Split the StockData (80% train, 20% test)
     split_ratio = 0.8
     split_idx = math.floor(len(features)*split_ratio)
     features = features.set_index('timestamp')
@@ -79,7 +79,7 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
     # Create a VectorAssembler instance
     assembler = VectorAssembler(inputCols=list(selected_columns), outputCol='features')
 
-    # Apply the assembler to the training and testing data
+    # Apply the assembler to the training and testing StockData
     train_data = assembler.transform(train_data)
     test_data = assembler.transform(test_data)
     featureCol = 'features'
@@ -104,7 +104,7 @@ def pyspark_random_forest(train_features, test_features, train_target, test_targ
     model = rf.fit(train_data)
 
     if test:
-        # Make predictions on the test data
+        # Make predictions on the test StockData
         predictions = model.transform(test_data)
         # Evaluate the model using RegressionEvaluator
         evaluator = RegressionEvaluator(labelCol="Adjusted Close", predictionCol="prediction", metricName="rmse")
@@ -152,7 +152,7 @@ def xgb_gradient_boosting(train_features, test_features, train_target, test_targ
 
 def tf_neural_network(train_features, test_features, train_target, test_target, test=False):
 
-    # Convert the data to numpy arrays
+    # Convert the StockData to numpy arrays
     X_train = np.array(train_features)
     y_train = np.array(train_target)
     X_test = np.array(test_features)
