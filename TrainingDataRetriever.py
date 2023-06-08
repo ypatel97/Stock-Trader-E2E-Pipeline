@@ -11,18 +11,18 @@ def retrieve_and_store():
     SYMBOL = 'VOO'
     TIME_PERIOD = '10'
 
-    # Retrieve weekly adjusted data
+    # Retrieve weekly adjusted StockData
     url = f'https://www.alphavantage.co/query?function=TIME_SERIES_WEEKLY_ADJUSTED&' \
           f'symbol={SYMBOL}&apikey={KEY}&datatype=csv'
 
     data = requests.get(url)
 
     if data.status_code != 200:
-        print('Failed to retrieve symbol data')
+        print('Failed to retrieve symbol StockData')
         return
 
     df = pd.read_csv(StringIO(data.text))
-    df.to_csv(f'data/stock.csv', index=False)
+    df.to_csv(f'StockData/stock.csv', index=False)
 
 
     # Retrieve technical indicator info
@@ -44,17 +44,17 @@ def retrieve_and_store():
         data = requests.get(ti_url)
 
         if data.status_code != 200:
-            print(f'Failed to get {ti} data...')
+            print(f'Failed to get {ti} StockData...')
             continue
 
         ti_series = pd.read_csv(StringIO(data.text))
-        ti_series.to_csv(f'data/{ti}.csv', index=False)
+        ti_series.to_csv(f'StockData/{ti}.csv', index=False)
         sleep(15)
 
 
 def format_stored_data():
 
-    df = pd.read_csv('data/stock.csv')
+    df = pd.read_csv('StockData/stock.csv')
 
     technical_indicators = ['SMA', 'EMA', 'WMA', 'DEMA', 'TEMA', 'TRIMA', 'KAMA', 'MAMA', 'VWAP', 'T3', 'MACD',
                             'WILLR', 'ADXR', 'APO', 'PPO', 'MOM', 'BOP', 'CMO', 'ROC', 'ROCR',
@@ -63,7 +63,7 @@ def format_stored_data():
                             'OBV', 'HT_TRENDLINE', 'HT_SINE', 'HT_TRENDMODE', 'HT_DCPERIOD', 'HT_DCPHASE', 'HT_PHASOR']
 
     for ti in technical_indicators:
-        ti_df = pd.read_csv(f'data/{ti}.csv')
+        ti_df = pd.read_csv(f'StockData/{ti}.csv')
         df = pd.concat([df, ti_df.iloc[:, 1:]], axis=1)
 
     # Move adjusted close to the end
@@ -77,9 +77,9 @@ def format_trending_data():
     trending_ti = ['SMA', 'EMA', 'VWAP', 'MACD', 'AROON', 'BBANDS', 'AD', 'OBV']
 
 if __name__ == '__main__':
-    # Gets data and stores it in data folder
+    # Gets StockData and stores it in StockData folder
     #retrieve_and_store()
 
-    # Formats all the data into a single CSV called 'FormattedData' using Pandas (if not using postgreSQL and Spark)
+    # Formats all the StockData into a single CSV called 'FormattedData' using Pandas (if not using postgreSQL and Spark)
     format_stored_data()
 
