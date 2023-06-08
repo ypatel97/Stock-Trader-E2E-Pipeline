@@ -48,12 +48,11 @@ def main():
                                              train_target.copy(),
                                              test_target.copy())
 
-    # Todo: fix this
     # Save the models
     path = 'Models/'
-    random_forest_model.write().overwrite().save(path)
-    gradient_boosting_model.save(path, overwrite=True)
-    tf.saved_model.save(neural_network_model, path, overwrite=True)
+    random_forest_model.write().overwrite().save(path+"MLlibModel")
+    gradient_boosting_model.save_model(path+"XGBoostModel.txt")
+    tf.saved_model.save(neural_network_model, path+"TensorFlowModel")
 
 
 def pyspark_random_forest(train_features, test_features, train_target, test_target, test=True, feature_engineering=False):
@@ -184,6 +183,8 @@ def tf_neural_network(train_features, test_features, train_target, test_target, 
         mse = mean_squared_error(y_test, predictions)
         rmse = math.sqrt(mse)
         print(f'rmse: {rmse}')
+
+    return model
 
 if __name__ == '__main__':
     main()
