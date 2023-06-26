@@ -4,7 +4,7 @@ from io import StringIO
 from time import sleep
 
 
-def retrieve_and_store():
+def retrieve_and_store(technical_indicators):
 
     # Parameters
     KEY = 'insert_api_key'
@@ -19,18 +19,11 @@ def retrieve_and_store():
 
     if data.status_code != 200:
         print('Failed to retrieve symbol StockData')
+        raise Exception('Status code not 200')
         return
 
     df = pd.read_csv(StringIO(data.text))
     df.to_csv(f'StockData/stock.csv', index=False)
-
-
-    # Retrieve technical indicator info
-    technical_indicators = ['SMA', 'EMA', 'WMA', 'DEMA', 'TEMA', 'TRIMA', 'KAMA', 'MAMA', 'VWAP', 'T3', 'MACD',
-                            'STOCHF', 'STOCHRSI', 'WILLR', 'ADXR', 'APO', 'PPO', 'MOM', 'BOP', 'CMO', 'ROC', 'ROCR',
-                            'AROON', 'AROONOSC', 'MFI', 'TRIX', 'ULTOSC', 'DX', 'MINUS_DI', 'PLUS_DI', 'MINUS_DM',
-                            'PLUS_DM', 'BBANDS', 'MIDPOINT', 'MIDPRICE', 'SAR', 'TRANGE', 'ATR', 'NATR', 'AD', 'ADOSC',
-                            'OBV', 'HT_TRENDLINE', 'HT_SINE', 'HT_TRENDMODE', 'HT_DCPERIOD', 'HT_DCPHASE', 'HT_PHASOR']
 
 
     for ti in technical_indicators:
@@ -45,6 +38,7 @@ def retrieve_and_store():
 
         if data.status_code != 200:
             print(f'Failed to get {ti} StockData...')
+            print("Using last week's data.")
             continue
 
         ti_series = pd.read_csv(StringIO(data.text))
@@ -52,15 +46,11 @@ def retrieve_and_store():
         sleep(15)
 
 
-def format_stored_data():
+def format_stored_data(technical_indicators):
 
     df = pd.read_csv('StockData/stock.csv')
 
-    technical_indicators = ['SMA', 'EMA', 'WMA', 'DEMA', 'TEMA', 'TRIMA', 'KAMA', 'MAMA', 'VWAP', 'T3', 'MACD',
-                            'WILLR', 'ADXR', 'APO', 'PPO', 'MOM', 'BOP', 'CMO', 'ROC', 'ROCR',
-                            'AROON', 'AROONOSC', 'MFI', 'TRIX', 'ULTOSC', 'DX', 'MINUS_DI', 'PLUS_DI', 'MINUS_DM',
-                            'PLUS_DM', 'BBANDS', 'MIDPOINT', 'MIDPRICE', 'SAR', 'TRANGE', 'ATR', 'NATR', 'AD', 'ADOSC',
-                            'OBV', 'HT_TRENDLINE', 'HT_SINE', 'HT_TRENDMODE', 'HT_DCPERIOD', 'HT_DCPHASE', 'HT_PHASOR']
+
 
     for ti in technical_indicators:
         ti_df = pd.read_csv(f'StockData/{ti}.csv')
@@ -77,9 +67,14 @@ def format_trending_data():
     trending_ti = ['SMA', 'EMA', 'VWAP', 'MACD', 'AROON', 'BBANDS', 'AD', 'OBV']
 
 if __name__ == '__main__':
+    technical_indicators = ['SMA', 'EMA', 'WMA', 'DEMA', 'TEMA', 'TRIMA', 'KAMA', 'MAMA', 'VWAP', 'T3', 'MACD',
+                            'WILLR', 'ADXR', 'APO', 'PPO', 'MOM', 'BOP', 'CMO', 'ROC', 'ROCR',
+                            'AROON', 'AROONOSC', 'MFI', 'TRIX', 'ULTOSC', 'DX', 'MINUS_DI', 'PLUS_DI', 'MINUS_DM',
+                            'PLUS_DM', 'BBANDS', 'MIDPOINT', 'MIDPRICE', 'SAR', 'TRANGE', 'ATR', 'NATR', 'AD', 'ADOSC',
+                            'OBV', 'HT_TRENDLINE', 'HT_SINE', 'HT_TRENDMODE', 'HT_DCPERIOD', 'HT_DCPHASE', 'HT_PHASOR']
     # Gets StockData and stores it in StockData folder
-    #retrieve_and_store()
+    #retrieve_and_store(technical_indicators)
 
     # Formats all the StockData into a single CSV called 'FormattedData' using Pandas (if not using postgreSQL and Spark)
-    format_stored_data()
+    format_stored_data(technical_indicators)
 
